@@ -22,9 +22,9 @@ The following steps were used in this work:
 
 To better navigate in the multiple analyses performed in thiese pipelines, a folders architecture was created as follows:
 - "main" folder, containing all the sub-folders for this analysis
-- "work" folder, containing raw and processed data for each pipeline
-- "results" folder, containing the final output of each pipeline
-- "scripts" folder, containing all the scripts
+  - "work" (sub)folder, containing raw and processed data for each pipeline
+  - "results" (sub)folder, containing the final output of each pipeline
+  - "scripts" (sub)folder, containing all the scripts
 An overview of the folders architecture is reported here:\
 inserire immagine folders
 
