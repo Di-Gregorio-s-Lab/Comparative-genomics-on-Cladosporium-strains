@@ -20,18 +20,18 @@ The following steps were used in this work:
 - [PCoA and heatmaps with ggplot2 v3.5.2 and pheatmap v1.0.13 on R](#PCoA-and-heatmaps-with-ggplot2-and-pheatmap)
 
 ## Bioinformatic pipelines in Bash
-# Genome assembly with HiFiasm
+### Genome assembly with HiFiasm
 
-# Genome quality check with Quast and BUSCO
+### Genome quality check with Quast and BUSCO
 
-# Taxonomic identification with BLAST
+### Taxonomic identification with BLAST
 
-# Gene prediction with Braker3
+### Gene prediction with Braker3
 
-# Functional annotation with Diamond + GO and CAZyme annotation
+### Functional annotation with Diamond + GO and CAZyme annotation
 
 ## Bioinformatic pipelines in R
-# UPGMA tree with hclust and ggtree
+### UPGMA tree with hclust and ggtree
 
-# PCoA and heatmaps with ggplot2 and pheatmap
+### PCoA and heatmaps with ggplot2 and pheatmap
 
