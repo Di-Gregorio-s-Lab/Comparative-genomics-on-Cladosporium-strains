@@ -20,14 +20,15 @@ The following steps were used in this work:
 - [Miltiple sequence alignment with ClustalW](#Miltiple-sequence-alignment-with-ClustalW)
 - [PCoA and heatmaps with ggplot2 v3.5.2 and pheatmap v1.0.13 on R](#PCoA-and-heatmaps-with-ggplot2-and-pheatmap)
 
-## Bioinformatic pipelines in Bash
 To better navigate in the multiple analyses performed in thiese pipelines, a folders architecture was created as follows:
 - "main" folder, containing all the sub-folders for this analysis
 - "work" folder, containing raw and processed data for each pipeline
 - "results" folder, containing the final output of each pipeline
 - "scripts" folder, containing all the scripts
-An overview of the folders architecture is reported here:
+An overview of the folders architecture is reported here:\
 inserire immagine folders
+
+## Bioinformatic pipelines in Bash
 
 ### Genome assembly with HiFiasm
 
