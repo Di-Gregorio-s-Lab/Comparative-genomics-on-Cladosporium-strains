@@ -39,9 +39,17 @@ inserire immagine folders
 
 ### Functional annotation with Diamond + GO and CAZyme annotation
 
-### Miltiple sequence alignment with ClustalW
 
 ## Bioinformatic pipelines in R
+### Required files
+Prepare a "metadata" file containing all the grouping factors of your samples.\
+Here you can find an example of a metadata.xlsx file:\
+head metadata
+
+Prepare a "names" file containing a code to recognize your annotation files and the species name of each strain.\
+Here you can find an example of a names.txt file:\
+head names
+
 ### UPGMA tree with hclust and ggtree
 This pipeline was modified starting from [Brandon Güell et al.](https://fuzzyatelin.github.io/bioanth-stats/module-24/module-24.html)
 
@@ -113,9 +121,79 @@ phylogenetic_tree <- ggtree(h_cluster) + xlim(-0.4, .35) + theme_tree2() +
 #save plot
 ggsave(filename = "cladosporium_tree.png", plot = phylogenetic_tree,
 path = 'results', width = 17, height =10, units = "cm")
-
 ```
 
+### Miltiple sequence alignment with ClustalW
+This analysis was performed with the online tool [ClustalW](https://www.genome.jp/tools-bin/clustalw).
+
+Multi-FASTA files for each sequence of interest were used as input.
+
+Multi-FASTA files were obtained in R, starting from the output of [functional annotation](#Functional-annotation-with-Diamond-+-GO-and-CAZyme-annotation).
+
+Required libraries and set working directory:
+
+```r
+library(dplyr)
+library(stringr)
+library(tidyr)
+library(tidytext)
+library(readxl)
+
+#avoid scientific numbering
+options(scipen=999)
+
+setwd('absolute_path_to_folder/main')
+getwd()
+```
+
+Inport [names](#Required-files) and and previously obtained [annotation files](#Functional-annotation-with-Diamond-+-GO-and-CAZyme-annotation):
+
+```r
+names <- read.table("names.txt", sep = ';', fill = T)
+sum_df <- data.frame()
+
+#two different annotation files are required:
+#1. Diamond annotation
+#2. Uniprot Gene Ontology annotation
+
+#In the second table, due to the presence of all common separators in the main text of the annotation files, " was used to separate values in the table. 
+for (i in c(1:length(names[,1]))) {
+  df_strain <- names[i,1]
+  temp_df <-  read.table(paste("work/annotation/", df_strain, "_annot.tsv", sep = ""),
+                 sep = '\"', fill = T, quote="")
+#
+  second_df <-  read.table(paste("work/annotation/", df_strain, "_diamond.tsv", sep = ""),
+                 sep = '\"', fill = T, quote="")
+#
+  assign(paste(df_strain,"complete", sep = "_"), temp_df0)
+  assign(paste(df_strain, "diamond", sep = "_", second_df)
+}
+```
+
+Pipeline (still requires optimization):
+
+```r
+# repeat the pipeline for these four functions and for each strain
+#.*GO:0018583 biphenil diol
+#.*GO:0018784 haloacid
+#.*GO:0018786 haloalkane
+#.*GO:0018666 2,4-dichlorophenol 6-monooxygenase
+
+subset(F32_complete, grepl(".*GO:0018583" ,F32_complete$V11))
+#insert the value of V2 (i.e. the Uniprot identifier of the function) in the following function:
+subset(F32_diamond, grepl(".*TFDB_CUPPJ", F32_diamond$V2))
+
+#obtain the gene ID and search it in the fasta file (you can use the notes app)
+#copy the selected fasta in the multi-fasta file and rename the header to specify function and strain
+```
+
+In ClustalW, the options "output format = clustal", "slow/accurate" and "protein" were selected.
+
+Copy and paste the alignment scores in a separate note and format it like a tsv file.\
+An example of a tsv of the alignment scores is reported here:\
+alignment scores
+
+The alignments section in the ClustalW output is also very informative as it highlights the matches and mismatches of your sequences.
 
 ### PCoA and heatmaps with ggplot2 and pheatmap
 This pipeline was modified starting from a [CD Genomics tutorial](https://bioinfo.cd-genomics.com/resource-pcoa-analysis-with-R.html).
@@ -143,17 +221,7 @@ setwd('absolute_path_to_folder/main')
 getwd()
 ```
 
-Prepare a "metadata" file containing all the grouping factors of your samples.\
-Here you can find an example of a metadata.xlsx file:\
-head metadata
-
-Prepare a "names" file containing a code to recognize your annotation files and the species name of each strain.\
-Here you can find an example of a names.txt file:\
-head names
-
-Due to the presence of all common separators in the main text of the annotation files, " was used to separate values in the table. This created a weird data frame in R, containing an empty column between each column containing values. For this reason, the following pipeline might contain some sub-optimal data handling sections.
-
-Inport metadata and previously obtained [annotation files](#Functional-annotation-with-Diamond-+-GO-and-CAZyme-annotation):
+Inport [metadata](#Required-files), [names](#Required-files) and previously obtained [annotation files](#Functional-annotation-with-Diamond-+-GO-and-CAZyme-annotation):
 
 ```r
 metadata <- as.data.frame(as.matrix(read_excel("work/annotation/metadata.xlsx")))
@@ -162,6 +230,7 @@ metadata <- metadata[order(metadata$species),]
 names <- read.table("names.txt", sep = ';', fill = T)
 sum_df <- data.frame()
 
+#Due to the presence of all common separators in the main text of the annotation files, " was used to separate values in the table. 
 for (i in c(1:length(names[,1]))) {
   df_strain <- names[i,1]
   temp_df0 <-  read.table(paste("work/annotation/", df_strain, "_annot.tsv", sep = ""),
@@ -249,8 +318,7 @@ path = "results/", width = 6, height = 5.5)
 ggsave("pcoa_clado_GO1_3.jpg",plot = pcoa_clado_view_1_3_wide,
 path = "results/", width = 7.5, height = 5.5)
 
-#the two graphs were combined using paint.net,
-#which was also used to insert clear labels for each dot
+#the two graphs were combined using paint.net, which was also used to insert clear labels for each dot
 ```
 
 Multiple heatmaps were created with almost identical pipelines.
