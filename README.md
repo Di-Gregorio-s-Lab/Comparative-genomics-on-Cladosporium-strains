@@ -8,16 +8,16 @@ Quality and completeness of the assemblies are reported in the supplementary mat
 
 ## Pipeline overview
 The following steps were used in this work:
-- [genome assembly with HiFiasm v0.16.0 and Minimap2 v2.30](#Genome-assembly-with-HiFiasm-and-Minimap)
-- [genome quality check with Quast v5.3 and BUSCO v6.0.0](#Genome-quality-check-with-Quast-and-BUSCO)
-- [taxonomic identification with local and online BLAST v2.17.0](#Taxonomic-identification-with-BLAST)
-- [UPGMA tree with hclust and ggtree v3.12.0 on R v4.4](#UPGMA-tree-with-hclust-and-ggtree)
-- [gene prediction with Braker3 v3.0.8](#Gene-prediction-with-Braker3)
-- [functional annotation with Diamond v2.0.15 against the Swissprot database](#Functional-annotation-with-Diamond-+-CAZyme-annotation)
-- [CAZyme annotation with dbcan3 v5.1.2](#Functional-annotation-with-Diamond-+-CAZyme-annotation)
-- [Gene Ontology annotation with the Uniprot Retrive/ID mapping tool](#Gene-Ontology-(GO)-and-Enzyme-Comissions-(EC)-annotation)
-- [Miltiple sequence alignment with ClustalW](#Miltiple-sequence-alignment-with-ClustalW)
-- [PCoA and heatmaps with ggplot2 v3.5.2 and pheatmap v1.0.13 on R](#PCoA-and-heatmaps-with-ggplot2-and-pheatmap)
+- [genome assembly with HiFiasm v0.16.0 and Minimap2 v2.30](#genome-assembly-with-hifiasm-and-minimap)
+- [genome quality check with Quast v5.3 and BUSCO v6.0.0](#genome-quality-check-with-quast-and-busco)
+- [taxonomic identification with local and online BLAST v2.17.0](#taxonomic-identification-with-blast)
+- [UPGMA tree with hclust and ggtree v3.12.0 on R v4.4](#upgma-tree-with-hclust-and-ggtree)
+- [gene prediction with Braker3 v3.0.8](#gene-prediction-with-braker3)
+- [functional annotation with Diamond v2.0.15 against the Swissprot database](#functional-annotation-with-diamond)))
+- [CAZyme annotation with dbcan3 v5.1.2](#cazyme-annotation)
+- [Gene Ontology annotation with the Uniprot Retrive/ID mapping tool](#gene-ontology-go-and-enzyme-comissions-ec-annotation)
+- [Miltiple sequence alignment with ClustalW](#miltiple-sequence-alignment-with-clustalw)
+- [PCoA and heatmaps with ggplot2 v3.5.2 and pheatmap v1.0.13 on R](#pcoa-and-heatmaps-with-ggplot2-and-pheatmap)
 
 To better navigate in the multiple analyses performed in thiese pipelines, a folders architecture was created as follows:
 - "main" folder, containing all the sub-folders for this analysis
@@ -30,9 +30,23 @@ inserire immagine folders
 ## Bioinformatic pipelines in Bash
 Bioinformatic pipelines in Bash were performed in [Grex HPC](https://um-grex.github.io/grex-docs/grex/).\
 [Singularity](https://docs.sylabs.io/guides/3.0/user-guide/installation.html) was adopted for containerization. \
-An example on how singularity sif files were installed is reported in the [genome assembly section](#Genome-assembly-with-HiFiasm-and-Minimap)
+An example on how singularity sif files were installed is reported in the [genome assembly section](#genome-assembly-with-hifiasm-and-minimap)
 
 ### Required files
+Prepare a "names_bash.txt" file containing a code to recognize all Cladosporium strains.\
+Initially, this file contained only the 6 strains evalutated in this work. After downloading the 12 additional Cladosporium strains, this file was updated to include them. \
+Here you can find an example of a names_bash.txt file:\
+head names
+
+Prepare a "names_additional.txt" file containing a code to recognize the additional Cladosporium strains.\
+Here you can find an example of a names_additional.txt file:\
+head names
+
+Prepare a "codes_additional.txt" file containing the NCBI code for each additional Cladosporium strain.\
+Here you can find an example of a codes_additional.txt file:\
+head names
+
+These files are located in the "main" folder.
 
 ### Genome assembly with HiFiasm and Minimap
 A genome assembly step was performed using [HiFiasm](https://github.com/chhylp123/hifiasm), a tool built for PacBio libraries capable of handling high heterozygosis and eukaryote genomes.
@@ -148,7 +162,7 @@ done
 ### Inport of additional Cladosporium genomes
 Additional Cladosporium genomes were inported following the [NCBI tutorial](https://github.com/ncbi/datasets)
 
-The [codes_additional.txt and names_additional.txt files](#Required-files) are required:
+The [codes_additional.txt and names_additional.txt files](#required-files) are required:
 
 ```bash
 ls_codes=($(cat codes_additional.txt)) &&
@@ -158,7 +172,7 @@ MAX_names=$["$(cat names_additional.txt | wc -l)" - 1] &&
 for i in $(seq 0 $MAX_names);
 do
 alias datasets=work/genomes
-datasets download genome accession ${ls_codes[$i]} --filename ${ls_names[$i]}.zip
+datasets download genome accession ${ls_codes[$i]} --filename CCD_clado-${ls_names[$i]}_filtered.p_ctg.fa.zip
 done
 
 #unzip files
@@ -172,16 +186,51 @@ unzip ${ls_names[$i]}.zip
 echo "end ${ls_names[$i]}"
 done
 ```
+
 Downloaded genomes were moved to the folder "genomes". \
 From here on, the file names_bash.txt was updated to contain also the additional strains.
 
 ### Gene prediction with Braker3
+Braker3 is a powerful tool for gene prediction in fungal genomes.
+We used the RNAseq data from another Cladosporium strain as external evidence to better refine the gene prediction step. RNAseq data were downloaded from SRA under the accession ID [SRR24225000](https://www.ncbi.nlm.nih.gov/sra/SRR24225000) and are located in the folder "work/raw_reads/reference_rna/".
+
+Braker3 was installed with singularity.
+
+It is important to separately install Augustus:
 
 ```bash
+cd path_to/main/work/database
+git clone https://github.com/Gaius-Augustus/Augustus.git
 ```
 
-### Functional annotation with Diamond + CAZyme annotation
-Functional annotation was performed on the protein sequences obtained from [Braker3](#Gene-prediction-with-Braker3).
+Run Braker3 and specify Augustus folder:
+
+```bash
+cd path_to/main
+module load singularity
+
+ls_names=($(cat names_additional.txt)) &&
+MAX_names=$["$(cat names_additional.txt | wc -l)" - 1] &&
+\
+for i in $(seq 0 $MAX_names);
+do
+singularity exec work/sif/braker3.sif braker.pl \
+    --species=${ls_names[$i]} \
+    --genome=work/genomes/CCD_clado-${ls_names[$i]}_filtered.p_ctg.fa \
+    --rnaseq_sets_ids=SRR24225000 \
+    --rnaseq_sets_dir=work/raw_reads/reference_rna/ \
+    --threads=20 \
+    --gff3 --fungus \
+    --busco_lineage=capnodiales_odb10 \
+    --workingdir=work/braker_output/${ls_names[$i]} \
+    --AUGUSTUS_CONFIG_PATH=work/database/Augustus/config
+done
+```
+
+A series of useful files are located in the "braker_output" folder, including "braker.aa", which contains translated predicted genes (protein sequences) in FASTA format.
+
+### Functional annotation with Diamond
+Functional annotation was performed on the protein sequences obtained from [Braker3](#gene-prediction-with-braker3).
 [Diamond](https://github.com/bbuchfink/diamond) is an effective alignment tool and accepts only protein sequences as input.
 
 A Diamond database was created starting from the [Swissprot protein database](https://www.uniprot.org/uniprotkb?query=reviewed:true). The database was downloaded in the folder "work/database" under the name "uniprot_sprot.fasta.gz".
@@ -208,9 +257,53 @@ done
 
 It is important to specify the option "--max-target-seqs 1" as each predicted gene must have only one annotation. \
 We obtained a series of diamond.txt files containing both annotated protein names and their relative Uniprot identifiers.
-These identifiers can be used to obtain Gene Ontology (GO) terms and Enzyme Commission (EC) numbers.
+These identifiers can be used to obtain Gene Ontology (GO) terms and Enzyme Commission (EC) numbers. \
+An example of "diamond.txt" is reported below: \
+diamond.txt
 
 A section covernig how to [obtain GO and EC annotations] is reported in the following section.
+
+### CAZyme annotation
+CAZyme annotation was performed with the [dbcan3 tool](https://github.com/SilasK/dbcan). Only terms that were identified by both Diamond and dbcan_hmm.
+
+Download dbcan databases:
+
+```bash
+cd path_to/main
+
+mkdir work/database/cazy_db
+cd work/database/cazy_db \
+    && wget http://bcb.unl.edu/dbCAN2/download/Databases/V11/CAZyDB.08062022.fa && diamond makedb --in CAZyDB.08062022.fa -d CAZy \
+    && wget https://bcb.unl.edu/dbCAN2/download/Databases/V11/dbCAN-HMMdb-V11.txt && mv dbCAN-HMMdb-V11.txt dbCAN.txt && hmmpress dbCAN.txt \
+    && wget https://bcb.unl.edu/dbCAN2/download/Databases/V11/tcdb.fa && diamond makedb --in tcdb.fa -d tcdb \
+    && wget http://bcb.unl.edu/dbCAN2/download/Databases/V11/tf-1.hmm && hmmpress tf-1.hmm \
+    && wget http://bcb.unl.edu/dbCAN2/download/Databases/V11/tf-2.hmm && hmmpress tf-2.hmm \
+    && wget https://bcb.unl.edu/dbCAN2/download/Databases/V11/stp.hmm && hmmpress stp.hmm \
+    && cd ../ && wget http://bcb.unl.edu/dbCAN2/download/Samples/EscheriaColiK12MG1655.fna \
+    && wget http://bcb.unl.edu/dbCAN2/download/Samples/EscheriaColiK12MG1655.faa \
+    && wget http://bcb.unl.edu/dbCAN2/download/Samples/EscheriaColiK12MG1655.gff
+
+cd path_to/main
+```
+
+Run dbcan3:
+
+```bash
+ls_names=($(cat names_bash.txt)) &&
+MAX_names=$["$(cat names_bash.txt | wc -l)" - 1] &&
+\
+for i in $(seq 0 $MAX_names);
+do
+run_dbcan CAZyme_annotation --mode protein --input_raw_data work/braker_out/${ls_names[$i]}/braker.aa \
+--output_dir 'work/annotation/${ls_names[$i]}/cazy' --threads 25 --db_dir work/database/cazy_db
+done
+```
+
+A CAZy annotation file was obtained and can be used for downstream analyses. \
+An example of a CAZy annotation file is reported below: \
+CAZy annotation
+
+Heatmaps involving CAZymes were obtained in R following the [Heatmap pipeline](#pcoa-and-heatmaps-with-ggplot2-and-pheatmap) reported below.
 
 ## Bioinformatic pipelines in R
 ### Required files
@@ -222,7 +315,7 @@ Prepare a "names_R" file containing a code to recognize your annotation files an
 Here you can find an example of a names.txt file:\
 head names
 
-
+These files are located in the "main" folder.
 
 ### UPGMA tree with hclust and ggtree
 This pipeline was modified starting from [Brandon Güell et al.](https://fuzzyatelin.github.io/bioanth-stats/module-24/module-24.html)
@@ -241,7 +334,7 @@ setwd('absolute_path_to_folder/main')
 getwd()
 ```
 
-Inport previously obtained [multi-FASTA sequences](#Taxonomic-identification-with-BLAST):
+Inport previously obtained [multi-FASTA sequences](#taxonomic-identification-with-blast):
 
 ```r
 files <- list.files(
@@ -309,7 +402,7 @@ setwd('absolute_path_to_folder/main')
 getwd()
 ```
 
-Inport [names_R](#Required-files) and and previously obtained [diamond files](#Functional-annotation-with-Diamond-+-CAZyme-annotation):
+Inport [names_R](#required-files) and and previously obtained [diamond files](#functional-annotation-with-diamond))):
 
 ```r
 names <- read.table("names_R.txt", sep = ';', fill = T)
@@ -385,7 +478,7 @@ This analysis was performed with the online tool [ClustalW](https://www.genome.j
 
 Multi-FASTA files for each sequence of interest were used as input.
 
-Multi-FASTA files were obtained in R, starting from the output of [GO functional annotation](#Gene-Ontology-(GO)-and-Enzyme-Comissions-(EC)-annotation).
+Multi-FASTA files were obtained in R, starting from the output of [GO functional annotation](#gene-ontology-go-and-enzyme-comissions-ec-annotation).
 
 Required libraries and set working directory:
 
@@ -403,7 +496,7 @@ setwd('absolute_path_to_folder/main')
 getwd()
 ```
 
-Inport [names_R](#Required-files) and and previously obtained [annotation files](#Gene-Ontology-(GO)-and-Enzyme-Comissions-(EC)-annotation):
+Inport [names_R](#required-files) and and previously obtained [annotation files](#gene-ontology-go-and-enzyme-comissions-ec-annotation):
 
 ```r
 names <- read.table("names_R.txt", sep = ';', fill = T)
@@ -478,7 +571,7 @@ setwd('absolute_path_to_folder/main')
 getwd()
 ```
 
-Inport [metadata](#Required-files), [names_R](#Required-files) and previously obtained [annotation files](#Gene-Ontology-(GO)-and-Enzyme-Comissions-(EC)-annotation):
+Inport [metadata](#required-files), [names_R](#required-files) and previously obtained [annotation files](#gene-ontology-go-and-enzyme-comissions-ec-annotation):
 
 ```r
 metadata <- as.data.frame(as.matrix(read_excel("work/annotation/metadata.xlsx")))
@@ -662,7 +755,7 @@ ggsave("heat_clado_deg.jpg",plot = heat_clado_deg,
 path = "results/", width = 14, height = 5)
 ```
 
-Heatmap of [ClustalW results](#Miltiple-sequence-alignment-with-ClustalW):
+Heatmap of [ClustalW results](#miltiple-sequence-alignment-with-clustalw):
 
 ```r
 #showing the pipeline with haloacid dehalogenase
