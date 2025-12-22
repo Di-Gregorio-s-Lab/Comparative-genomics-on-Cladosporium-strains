@@ -8,7 +8,7 @@ Quality and completeness of the assemblies are reported in the supplementary mat
 
 ## Pipeline overview
 The following steps were used in this work:
-- [genome assembly with HiFiasm v0.16.0 and Minimap2 v2.30](#Genome-assembly-with-HiFiasm)
+- [genome assembly with HiFiasm v0.16.0 and Minimap2 v2.30](#Genome-assembly-with-HiFiasm-and-Minimap)
 - [genome quality check with Quast v5.3 and BUSCO v6.0.0](#Genome-quality-check-with-Quast-and-BUSCO)
 - [taxonomic identification with local and online BLAST v2.17.0](#Taxonomic-identification-with-BLAST)
 - [UPGMA tree with hclust and ggtree v3.12.0 on R v4.4](#UPGMA-tree-with-hclust-and-ggtree)
@@ -28,17 +28,105 @@ An overview of the folders architecture is reported here:\
 inserire immagine folders
 
 ## Bioinformatic pipelines in Bash
+Bioinformatic pipelines in Bash were performed in [Grex HPC](https://um-grex.github.io/grex-docs/grex/).\
+[Singularity](https://docs.sylabs.io/guides/3.0/user-guide/installation.html) was adopted for containerization. \
+An example on how singularity sif files were installed is reported in the [genome assembly section](#Genome-assembly-with-HiFiasm-and-Minimap)
 
-### Genome assembly with HiFiasm
+### Required files
+
+### Genome assembly with HiFiasm and Minimap
+A genome assembly step was performed using [HiFiasm](https://github.com/chhylp123/hifiasm), a tool built for PacBio libraries capable of handling high heterozygosis and eukaryote genomes.
+
+```bash
+cd path_to/main
+
+# singularity and samtools are already present in Grex
+module load singularity
+module load samtools
+
+cd work/sif
+#install the sif for hifiasm
+singularity search hifiasm
+#copy and paste the path to hifiasm_latest.sif
+singularity pull hifiasm_latest.sif library://pastepath/hifiasm_latest.sif
+cd path_to/main
+
+#perform genome assembly with HiFiasm (25 threads)
+singularity exec work/sif/hifiasm-nf_latest.sif hifiasm \
+-o work/genomes/F32_assembly work/raw_reads/F32_reads.fastq \
+--primary -t 25
+
+#we obtain a .gfa, to be converted in .fa
+awk '/^S/{print ">"$2\n"$3}' work/genomes/F32_assembly/F32_assembly.p_ctg.gfa | fold > work/genomes/F32_assembly/CCD_clado-F32.p_ctg.fa
+
+#remove unassembled sequences (length < 25,000 bp)
+#install bbmap (not present in singularity)
+cd work/sif
+wget https://sourceforge.net/projects/bbmap/files/latest/download -O BBTools.tar.gz
+tar -xzf BBTools.tar.gz
+cd path_to/main
+#use reformat in bbmap
+work/sif/bbmap/reformat.sh in=work/genomes/CCD_clado-F32.p_ctg.fa \
+out=work/genomes/CCD_clado-F32_filtered.p_ctg.fa minlength=25000
+```
+
+We obtained assembled genomes in FASTA format, ready for downstream analyses.
+
+The genome assembly of strain "O" had an abnormal size. This might derive from the presence of contaminant sequences.
+
+To solve this issue, raw reads of strain "O" were first aligned to the assembled genome of strain "F105".
+Aligned reads, free of contamination, were then used for genome alignment in HiFiasm.
+
+```bash
+cd path_to/main
+
+#use minimap2 to align raw DNA sequences of strain O to the previously assembled genome of strain F105
+singularity exec work/sif/minimap2_v2.30.sif minimap2 \
+work/genomes/CCD_clado-f105.fa work/raw_sequences/O_SRR35901019.fastq \
+--sam-hit-only -x map-hifi -t 25 > work/minimap_align/O_minimapalign.sam
+
+#samtools does not support paths. Moving working directory.
+cd work/minimap_align/
+#convert .sam in .fastq
+samtools fastq O_minimapalign.sam > O_reads.fastq
+#return back to "main" folder
+cd path_to/main
+```
+
+It is now possible to use the filtered reads "O_reads.fastq" to perform a genome assembly using HiFiasm, as previously described.
 
 ### Genome quality check with Quast and BUSCO
+To assess genome quality and completeness, the tools [Quast](https://github.com/ablab/quast) and [BUSCO](https://busco.ezlab.org/) were used.
+
+```bash
+#Quast was already present in Grex
+module load Quast
+quast work/genomes/F32_filtered.p_ctg.fa -o work/quast
+
+#running BUSCO from singularity
+singularity exec work/sif/busco_v6.0.0.sif busco \
+ -i work/genomes/F32_filtered.p_ctg.fa -o work/BUSCO/F32 -m genome -l -c 25
+```
 
 ### Taxonomic identification with BLAST
 
+```bash
+```
+
+### Inport of additional Cladosporium genomes
+
+```bash
+```
+
 ### Gene prediction with Braker3
+
+```bash
+```
 
 ### Functional annotation with Diamond + GO and CAZyme annotation
 
+```bash
+```
 
 ## Bioinformatic pipelines in R
 ### Required files
@@ -46,7 +134,7 @@ Prepare a "metadata" file containing all the grouping factors of your samples.\
 Here you can find an example of a metadata.xlsx file:\
 head metadata
 
-Prepare a "names" file containing a code to recognize your annotation files and the species name of each strain.\
+Prepare a "names_R" file containing a code to recognize your annotation files and the species name of each strain.\
 Here you can find an example of a names.txt file:\
 head names
 
@@ -146,10 +234,10 @@ setwd('absolute_path_to_folder/main')
 getwd()
 ```
 
-Inport [names](#Required-files) and and previously obtained [annotation files](#Functional-annotation-with-Diamond-+-GO-and-CAZyme-annotation):
+Inport [names_R](#Required-files) and and previously obtained [annotation files](#Functional-annotation-with-Diamond-+-GO-and-CAZyme-annotation):
 
 ```r
-names <- read.table("names.txt", sep = ';', fill = T)
+names <- read.table("names_R.txt", sep = ';', fill = T)
 sum_df <- data.frame()
 
 #two different annotation files are required:
@@ -221,13 +309,13 @@ setwd('absolute_path_to_folder/main')
 getwd()
 ```
 
-Inport [metadata](#Required-files), [names](#Required-files) and previously obtained [annotation files](#Functional-annotation-with-Diamond-+-GO-and-CAZyme-annotation):
+Inport [metadata](#Required-files), [names_R](#Required-files) and previously obtained [annotation files](#Functional-annotation-with-Diamond-+-GO-and-CAZyme-annotation):
 
 ```r
 metadata <- as.data.frame(as.matrix(read_excel("work/annotation/metadata.xlsx")))
 metadata <- metadata[order(metadata$species),]
 
-names <- read.table("names.txt", sep = ';', fill = T)
+names <- read.table("names_R.txt", sep = ';', fill = T)
 sum_df <- data.frame()
 
 #Due to the presence of all common separators in the main text of the annotation files, " was used to separate values in the table. 
