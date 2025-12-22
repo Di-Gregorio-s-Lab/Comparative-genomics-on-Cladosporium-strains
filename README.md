@@ -52,12 +52,24 @@ singularity pull hifiasm_latest.sif library://pastepath/hifiasm_latest.sif
 cd path_to/main
 
 #perform genome assembly with HiFiasm (25 threads)
+ls_names=($(cat names_bash.txt)) &&
+MAX_names=$["$(cat names_bash.txt | wc -l)" - 1] &&
+\
+for i in $(seq 0 $MAX_names);
+do
 singularity exec work/sif/hifiasm-nf_latest.sif hifiasm \
--o work/genomes/F32_assembly work/raw_reads/F32_reads.fastq \
+-o work/genomes/${ls_names[$i]}_assembly work/raw_reads/${ls_names[$i]}_reads.fastq \
 --primary -t 25
+done
 
 #we obtain a .gfa, to be converted in .fa
-awk '/^S/{print ">"$2\n"$3}' work/genomes/F32_assembly/F32_assembly.p_ctg.gfa | fold > work/genomes/F32_assembly/CCD_clado-F32.p_ctg.fa
+ls_names=($(cat names_bash.txt)) &&
+MAX_names=$["$(cat names_bash.txt | wc -l)" - 1] &&
+\
+for i in $(seq 0 $MAX_names);
+do
+awk '/^S/{print ">"$2\n"$3}' work/genomes/${ls_names[$i]}_assembly.p_ctg.gfa | fold > work/genomes/CCD_clado-${ls_names[$i]}.p_ctg.fa
+done
 
 #remove unassembled sequences (length < 25,000 bp)
 #install bbmap (not present in singularity)
@@ -65,9 +77,16 @@ cd work/sif
 wget https://sourceforge.net/projects/bbmap/files/latest/download -O BBTools.tar.gz
 tar -xzf BBTools.tar.gz
 cd path_to/main
+
 #use reformat in bbmap
-work/sif/bbmap/reformat.sh in=work/genomes/CCD_clado-F32.p_ctg.fa \
-out=work/genomes/CCD_clado-F32_filtered.p_ctg.fa minlength=25000
+ls_names=($(cat names_bash.txt)) &&
+MAX_names=$["$(cat names_bash.txt | wc -l)" - 1] &&
+\
+for i in $(seq 0 $MAX_names);
+do
+work/sif/bbmap/reformat.sh in=work/genomes/CCD_clado-${ls_names[$i]}.p_ctg.fa \
+out=work/genomes/CCD_clado-${ls_names[$i]}_filtered.p_ctg.fa minlength=25000
+done
 ```
 
 We obtained assembled genomes in FASTA format, ready for downstream analyses.
@@ -82,7 +101,7 @@ cd path_to/main
 
 #use minimap2 to align raw DNA sequences of strain O to the previously assembled genome of strain F105
 singularity exec work/sif/minimap2_v2.30.sif minimap2 \
-work/genomes/CCD_clado-f105.fa work/raw_sequences/O_SRR35901019.fastq \
+work/genomes/CCD_clado-f105_filtered.p_ctg.fa work/raw_sequences/O_SRR35901019.fastq \
 --sam-hit-only -x map-hifi -t 25 > work/minimap_align/O_minimapalign.sam
 
 #samtools does not support paths. Moving working directory.
@@ -101,11 +120,24 @@ To assess genome quality and completeness, the tools [Quast](https://github.com/
 ```bash
 #Quast was already present in Grex
 module load Quast
-quast work/genomes/F32_filtered.p_ctg.fa -o work/quast
+
+ls_names=($(cat names_bash.txt)) &&
+MAX_names=$["$(cat names_bash.txt | wc -l)" - 1] &&
+\
+for i in $(seq 0 $MAX_names);
+do
+quast work/genomes/${ls_names[$i]}_filtered.p_ctg.fa -o work/quast
+done
 
 #running BUSCO from singularity
+ls_names=($(cat names_bash.txt)) &&
+MAX_names=$["$(cat names_bash.txt | wc -l)" - 1] &&
+\
+for i in $(seq 0 $MAX_names);
+do
 singularity exec work/sif/busco_v6.0.0.sif busco \
- -i work/genomes/F32_filtered.p_ctg.fa -o work/BUSCO/F32 -m genome -l -c 25
+ -i work/genomes/${ls_names[$i]}_filtered.p_ctg.fa -o work/BUSCO/${ls_names[$i]} -m genome -l -c 25
+done
 ```
 
 ### Taxonomic identification with BLAST
@@ -114,9 +146,34 @@ singularity exec work/sif/busco_v6.0.0.sif busco \
 ```
 
 ### Inport of additional Cladosporium genomes
+Additional Cladosporium genomes were inported following the [NCBI tutorial](https://github.com/ncbi/datasets)
+
+The [codes_additional.txt and names_additional.txt files](#Required-files) is required:
 
 ```bash
+ls_codes=($(cat codes_additional.txt)) &&
+ls_names=($(cat names_additional.txt)) &&
+MAX_names=$["$(cat names_additional.txt | wc -l)" - 1] &&
+\
+for i in $(seq 0 $MAX_names);
+do
+alias datasets=work/genomes
+datasets download genome accession ${ls_codes[$i]} --filename ${ls_names[$i]}.zip
+done
+
+#unzip files
+ls_names=($(cat names_additional.txt)) &&
+MAX_names=$["$(cat names_additional.txt | wc -l)" - 1] &&
+\
+for i in $(seq 0 $MAX_names);
+do
+echo "start ${ls_names[$i]}"
+unzip ${ls_names[$i]}.zip
+echo "end ${ls_names[$i]}"
+done
 ```
+Downloaded genomes were moved to the folder "genomes". \
+From here on, the file names_bash.txt was updated to contain also the additional strains.
 
 ### Gene prediction with Braker3
 
