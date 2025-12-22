@@ -13,9 +13,9 @@ The following steps were used in this work:
 - [taxonomic identification with local and online BLAST v2.17.0](#Taxonomic-identification-with-BLAST)
 - [UPGMA tree with hclust and ggtree v3.12.0 on R v4.4](#UPGMA-tree-with-hclust-and-ggtree)
 - [gene prediction with Braker3 v3.0.8](#Gene-prediction-with-Braker3)
-- [functional annotation with Diamond v2.0.15 against the Swissprot database](#Functional-annotation-with-Diamond-+-GO-and-CAZyme-annotation)
-- [Gene Ontology annotation with the Uniprot Retrive/ID mapping tool](#Functional-annotation-with-Diamond-+-GO-and-CAZyme-annotation)
-- [CAZyme annotation with dbcan3 v5.1.2](#Functional-annotation-with-Diamond-+-GO-and-CAZyme-annotation)
+- [functional annotation with Diamond v2.0.15 against the Swissprot database](#Functional-annotation-with-Diamond-+-CAZyme-annotation)
+- [CAZyme annotation with dbcan3 v5.1.2](#Functional-annotation-with-Diamond-+-CAZyme-annotation)
+- [Gene Ontology annotation with the Uniprot Retrive/ID mapping tool](#Gene-Ontology-(GO)-and-Enzyme-Comissions-(EC)-annotation)
 - [Miltiple sequence alignment with ClustalW](#Miltiple-sequence-alignment-with-ClustalW)
 - [PCoA and heatmaps with ggplot2 v3.5.2 and pheatmap v1.0.13 on R](#PCoA-and-heatmaps-with-ggplot2-and-pheatmap)
 
@@ -148,7 +148,7 @@ done
 ### Inport of additional Cladosporium genomes
 Additional Cladosporium genomes were inported following the [NCBI tutorial](https://github.com/ncbi/datasets)
 
-The [codes_additional.txt and names_additional.txt files](#Required-files) is required:
+The [codes_additional.txt and names_additional.txt files](#Required-files) are required:
 
 ```bash
 ls_codes=($(cat codes_additional.txt)) &&
@@ -180,10 +180,37 @@ From here on, the file names_bash.txt was updated to contain also the additional
 ```bash
 ```
 
-### Functional annotation with Diamond + GO and CAZyme annotation
+### Functional annotation with Diamond + CAZyme annotation
+Functional annotation was performed on the protein sequences obtained from [Braker3](#Gene-prediction-with-Braker3).
+[Diamond](https://github.com/bbuchfink/diamond) is an effective alignment tool and accepts only protein sequences as input.
+
+A Diamond database was created starting from the [Swissprot protein database](https://www.uniprot.org/uniprotkb?query=reviewed:true). The database was downloaded in the folder "work/database" under the name "uniprot_sprot.fasta.gz".
 
 ```bash
+cd path_to/main
+
+#diamond was already present in Grex
+module load diamond
+
+#make diamond database
+diamond makedb -d swissprot -p 10 --in 'work/database/uniprot_sprot.fasta.gz' -d 'work/database'
+
+#run diamond
+ls_names=($(cat names_bash.txt)) &&
+MAX_names=$["$(cat names_bash.txt | wc -l)" - 1] &&
+\
+for i in $(seq 0 $MAX_names);
+do
+diamond blastp --db 'database/swissprot.dmnd' -q 'work/braker_out/${ls_names[$i]}/braker.aa' \
+--out 'work/annotation/${ls_names[$i]}_diamond.txt' -p 10 --sensitive --max-target-seqs 1
+done
 ```
+
+It is important to specify the option "--max-target-seqs 1" as each predicted gene must have only one annotation. \
+We obtained a series of diamond.txt files containing both annotated protein names and their relative Uniprot identifiers.
+These identifiers can be used to obtain Gene Ontology (GO) terms and Enzyme Commission (EC) numbers.
+
+A section covernig how to [obtain GO and EC annotations] is reported in the following section.
 
 ## Bioinformatic pipelines in R
 ### Required files
@@ -194,6 +221,8 @@ head metadata
 Prepare a "names_R" file containing a code to recognize your annotation files and the species name of each strain.\
 Here you can find an example of a names.txt file:\
 head names
+
+
 
 ### UPGMA tree with hclust and ggtree
 This pipeline was modified starting from [Brandon Güell et al.](https://fuzzyatelin.github.io/bioanth-stats/module-24/module-24.html)
@@ -268,12 +297,95 @@ ggsave(filename = "cladosporium_tree.png", plot = phylogenetic_tree,
 path = 'results', width = 17, height =10, units = "cm")
 ```
 
+### Gene Ontology (GO) and Enzyme Comissions (EC) annotation
+With the use of the Swissprot protein database, it is possible to retrive both Gene Ontology (GO) and Enzyme Commission (EC) annotations, among others.
+
+Required libraries and set working directory:
+
+```r
+library(stringr)
+
+setwd('absolute_path_to_folder/main')
+getwd()
+```
+
+Inport [names_R](#Required-files) and and previously obtained [diamond files](#Functional-annotation-with-Diamond-+-CAZyme-annotation):
+
+```r
+names <- read.table("names_R.txt", sep = ';', fill = T)
+
+for (i in c(1:length(names[,1]))) {
+  df_strain <- names[i,1]
+  temp_df <- read.table(paste("work/annotation/", df_strain, "_diamond.tsv", sep = ""),
+              sep = '\"', fill = T, quote="")
+#subset annotations with <30% similarity
+  temp_df_subset <- subset(temp_df, temp_df$V3 >= 30)
+#split the ID column by "|" and retrive only the UniProt codes
+  temp_list <- strsplit(temp_df_subset$V2, "[|]")
+  temp_df2 <- do.call(rbind.data.frame, temp_list) 
+  temp_list2 <- list(temp_df2[,3])
+#save Uniprot ID list
+  data.table::fwrite(temp_list2, file = paste("work/annotation/", df_strain, "_uniprot_list.txt", sep = ""))
+#create and order and unique ID df with frequencies of each ID
+  df_unique <- as.data.frame(table(temp_df2[,3]))
+  df_unique <- df_unique[order(df_unique$Var1),]
+#
+  assign(paste(df_strain,"unique", sep = "_"), df_unique)
+}
+```
+
+An UniProt ID list for each strain is saved in "work/annotation/..._uniprot_list.txt".
+Each of these lists must be uploaded in the [UniProt batch retrival/ID/ tool](https://www.ebi.ac.uk/training/online/courses/uniprot-exploring-protein-sequence-and-functional-info/how-to-use-uniprot-tools-clone/batch-retrieval-id-mapping/). 
+
+In this online tool, columns of interest can be selected in the "configure columns" section.
+In this work, the position of certain columns is important for downstream analysis:
+- Column 6 - Protein names, which will become V9
+- Column 8 - Gene Ontology (GO), which will become V11
+
+Once obtained, the tables must be saved with the "download" button by selecting the "tsv" and "uncompressed" format. 
+All saved tables are named "idmapping.tsv" and can be inported on R to obtain the complete annotation table.
+
+```r
+for (i in c(1:length(names[,1]))) {
+  df_strain <- names[i,1]
+#inport output di Uniptot
+  temp_df <- read.table('Funghi_braker/Braker_out/Braker_F32/idmapping.tsv',
+            sep = '\t', header = TRUE, fill = T, , quote="")
+#quote = "" is necessary because the character ' is present
+#fill =T because there are some empty cells
+#order dataframe
+  temp_df <- temp_df[order(temp_df$From),]
+  assign(paste(df_strain, "idmapping", sep = "_"), temp_df)
+}
+
+#check if both dataframes are correctly ordered
+for (i in c(1:length(names[,1]))) {
+  df_strain <- names[i,1]
+  unique <- get(paste(df_strain, "_unique"))
+  idmapping <- get(paste(df_strain, "_idmapping"))
+  df_strain
+  table(unique$Var1 == idmapping$From)
+ }
+
+#if all dataframes are correct, merge them
+for (i in c(1:length(names[,1]))) {
+  df_strain <- names[i,1]
+  temp_df <- cbind(get(paste(df_strain, "_unique")),
+                   get(paste(df_strain, "_idmapping")))
+  write.table(temp_df, file = paste("work/annotation/". df_strain, "_annot.tsv", sep = ""), row.names = F)
+ }
+```
+
+We obtained complete annotation tables that can be used for downstream analyses. \
+An example of "annot.tsv" table is reported below: \
+annot.tsv
+
 ### Miltiple sequence alignment with ClustalW
 This analysis was performed with the online tool [ClustalW](https://www.genome.jp/tools-bin/clustalw).
 
 Multi-FASTA files for each sequence of interest were used as input.
 
-Multi-FASTA files were obtained in R, starting from the output of [functional annotation](#Functional-annotation-with-Diamond-+-GO-and-CAZyme-annotation).
+Multi-FASTA files were obtained in R, starting from the output of [GO functional annotation](#Gene-Ontology-(GO)-and-Enzyme-Comissions-(EC)-annotation).
 
 Required libraries and set working directory:
 
@@ -291,7 +403,7 @@ setwd('absolute_path_to_folder/main')
 getwd()
 ```
 
-Inport [names_R](#Required-files) and and previously obtained [annotation files](#Functional-annotation-with-Diamond-+-GO-and-CAZyme-annotation):
+Inport [names_R](#Required-files) and and previously obtained [annotation files](#Gene-Ontology-(GO)-and-Enzyme-Comissions-(EC)-annotation):
 
 ```r
 names <- read.table("names_R.txt", sep = ';', fill = T)
@@ -366,7 +478,7 @@ setwd('absolute_path_to_folder/main')
 getwd()
 ```
 
-Inport [metadata](#Required-files), [names_R](#Required-files) and previously obtained [annotation files](#Functional-annotation-with-Diamond-+-GO-and-CAZyme-annotation):
+Inport [metadata](#Required-files), [names_R](#Required-files) and previously obtained [annotation files](#Gene-Ontology-(GO)-and-Enzyme-Comissions-(EC)-annotation):
 
 ```r
 metadata <- as.data.frame(as.matrix(read_excel("work/annotation/metadata.xlsx")))
@@ -375,7 +487,7 @@ metadata <- metadata[order(metadata$species),]
 names <- read.table("names_R.txt", sep = ';', fill = T)
 sum_df <- data.frame()
 
-#Due to the presence of all common separators in the main text of the annotation files, " was used to separate values in the table. 
+#Due to the presence of all common separators in the main text of the annotation files, " was used to separate values in the table.
 for (i in c(1:length(names[,1]))) {
   df_strain <- names[i,1]
   temp_df0 <-  read.table(paste("work/annotation/", df_strain, "_annot.tsv", sep = ""),
@@ -391,6 +503,7 @@ assign("GO_df", sum_df)
 colnames(GO_df) <- c("GO", "strain")
 GO_df <- subset(GO_df, GO_df$GO!="")
 ```
+
 Pipeline:
 
 ```r
