@@ -24,8 +24,9 @@ To better navigate in the multiple analyses performed in thiese pipelines, a fol
   - "work" (sub)folder, containing raw and processed data for each pipeline
   - "results" (sub)folder, containing the final output of each pipeline
   - "scripts" (sub)folder, containing all the scripts
-An overview of the folders architecture is reported here:\
-inserire immagine folders
+An overview of the folders architecture is reported here:
+
+![folder structure adopted in this work](/github_images/folders.jpg)
 
 ## Bioinformatic pipelines in Bash
 Bioinformatic pipelines in Bash were performed in [Grex HPC](https://um-grex.github.io/grex-docs/grex/).\
@@ -36,15 +37,15 @@ An example on how singularity sif files were installed is reported in the [genom
 Prepare a "names_bash.txt" file containing a code to recognize all Cladosporium strains.\
 Initially, this file contained only the 6 strains evalutated in this work. After downloading the 12 additional Cladosporium strains, this file was updated to include them. \
 Here you can find an example of a names_bash.txt file:\
-[head of the names_bash.txt file](/github_images/names_bash.jpg)
+![head of the names_bash.txt file](/github_images/names_bash.jpg)
 
 Prepare a "names_additional.txt" file containing a code to recognize the additional Cladosporium strains.\
 Here you can find an example of a names_additional.txt file:\
-head names
+![head of the "names_additional.txt" file](/github_images/additional_names.jpg)
 
 Prepare a "codes_additional.txt" file containing the NCBI code for each additional Cladosporium strain.\
 Here you can find an example of a codes_additional.txt file:\
-head names
+![head of the "codes_additional.txt" file](/github_images/additional_codes.jpg)
 
 These files are located in the "main" folder.
 
@@ -200,8 +201,9 @@ The output of this cycle is a table containing:
 - column x - start position of the sequence
 - column y - end position of the sequence
 - column z - name of the contig
-The tables are saved in "work/tree". An example is reported below: \
-blast table
+The tables are saved in "work/tree". An example is reported below:
+
+![blast output format 6](/github_images/blast_outfmt6.jpg)
 
 You can use these informations to search the sequence of interest in the genome FASTA file using the following code:
 
@@ -313,15 +315,16 @@ MAX_names=$["$(cat names_bash.txt | wc -l)" - 1] &&
 for i in $(seq 0 $MAX_names);
 do
 diamond blastp --db 'database/swissprot.dmnd' -q 'work/braker_out/${ls_names[$i]}/braker.aa' \
---out 'work/annotation/${ls_names[$i]}_diamond.txt' -p 10 --sensitive --max-target-seqs 1
+--out 'work/annotation/${ls_names[$i]}_diamond.tsv' -p 10 --sensitive --max-target-seqs 1
 done
 ```
 
 It is important to specify the option "--max-target-seqs 1" as each predicted gene must have only one annotation. \
-We obtained a series of diamond.txt files containing both annotated protein names and their relative Uniprot identifiers.
+We obtained a series of diamond.tsv files containing both annotated protein names and their relative Uniprot identifiers.
 These identifiers can be used to obtain Gene Ontology (GO) terms and Enzyme Commission (EC) numbers. \
-An example of "diamond.txt" is reported below: \
-diamond.txt
+An example of "diamond.tsv" is reported below: 
+
+![head of a "diamond.tsv" output](/github_images/diamond.jpg)
 
 A section covernig how to [obtain GO and EC annotations] is reported in the following section.
 
@@ -362,20 +365,23 @@ done
 ```
 
 A CAZy annotation file was obtained and can be used for downstream analyses. \
-An example of a CAZy annotation file is reported below: \
-CAZy annotation
+An example of a CAZy annotation file is reported below: 
+
+![Head of a "cazy.tsv" file](/github_images/cazy.jpg)
 
 Heatmaps involving CAZymes were obtained in R following the [Heatmap pipeline](#pcoa-and-heatmaps-with-ggplot2-and-pheatmap) reported below.
 
 ## Bioinformatic pipelines in R
 ### Required files
 Prepare a "metadata" file containing all the grouping factors of your samples.\
-Here you can find an example of a metadata.xlsx file:\
-head metadata
+Here you can find an example of a metadata.xlsx file:
 
-Prepare a "names_R" file containing a code to recognize your annotation files and the species name of each strain.\
-Here you can find an example of a names.txt file:\
-head names
+![head of a "metadata.xlsx" file](/github_images/metadata.jpg)
+
+Prepare a "names_R.txt" file containing a code to recognize your annotation files and the species name of each strain.\
+Here you can find an example of a names.txt file:
+
+![head of a "names_R.txt" file](/github_images/names_R.jpg)
 
 These files are located in the "main" folder.
 
@@ -532,8 +538,11 @@ for (i in c(1:length(names[,1]))) {
 ```
 
 We obtained complete annotation tables that can be used for downstream analyses. \
-An example of "annot.tsv" table is reported below: \
-annot.tsv
+An example of "annot.tsv" table is reported below: 
+
+![head of an "annot.tsv" file](/github_images/annot.jpg)
+
+Due to the presence of all common separators in the cells of this table, " was used as a separator.
 
 ### Miltiple sequence alignment with ClustalW
 This analysis was performed with the online tool [ClustalW](https://www.genome.jp/tools-bin/clustalw).
@@ -602,8 +611,9 @@ subset(F32_diamond, grepl(".*TFDB_CUPPJ", F32_diamond$V2))
 In ClustalW, the options "output format = clustal", "slow/accurate" and "protein" were selected.
 
 Copy and paste the alignment scores in a separate note and format it like a tsv file.\
-An example of a tsv of the alignment scores is reported here:\
-alignment scores
+An example of a tsv of the alignment scores is reported here:
+
+![head of a "alignment_score.tsv" file](/github_images/alignment_score.jpg)
 
 The alignments section in the ClustalW output is also very informative as it highlights the matches and mismatches of your sequences.
 
