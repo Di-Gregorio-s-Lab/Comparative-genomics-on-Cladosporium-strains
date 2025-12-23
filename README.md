@@ -36,7 +36,7 @@ An example on how singularity sif files were installed is reported in the [genom
 Prepare a "names_bash.txt" file containing a code to recognize all Cladosporium strains.\
 Initially, this file contained only the 6 strains evalutated in this work. After downloading the 12 additional Cladosporium strains, this file was updated to include them. \
 Here you can find an example of a names_bash.txt file:\
-head names
+[head of the names_bash.txt file](/github_images/names_bash.jpg)
 
 Prepare a "names_additional.txt" file containing a code to recognize the additional Cladosporium strains.\
 Here you can find an example of a names_additional.txt file:\
