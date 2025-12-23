@@ -140,7 +140,7 @@ MAX_names=$["$(cat names_bash.txt | wc -l)" - 1] &&
 \
 for i in $(seq 0 $MAX_names);
 do
-quast work/genomes/${ls_names[$i]}_filtered.p_ctg.fa -o work/quast
+quast work/genomes/CCD_clado-${ls_names[$i]}_filtered.p_ctg.fa -o work/quast
 done
 
 #running BUSCO from singularity
@@ -150,14 +150,76 @@ MAX_names=$["$(cat names_bash.txt | wc -l)" - 1] &&
 for i in $(seq 0 $MAX_names);
 do
 singularity exec work/sif/busco_v6.0.0.sif busco \
- -i work/genomes/${ls_names[$i]}_filtered.p_ctg.fa -o work/BUSCO/${ls_names[$i]} -m genome -l -c 25
+ -i work/genomes/CCD_clado-${ls_names[$i]}_filtered.p_ctg.fa -o work/BUSCO/${ls_names[$i]} -m genome -l -c 25
 done
 ```
 
 ### Taxonomic identification with BLAST
+Taxonomic identification was performed with BLAST by extracting the Internal Transcribed Spacer (ITS), actine (act) and translation elongation factor (tef) sequences from each fungal genome. \
+Local BLAST was downloaded with Singularity.
+
+Make a BLAST database for each genome:
 
 ```bash
+ls_names=($(cat names_bash.txt)) &&
+MAX_names=$["$(cat names_bash.txt | wc -l)" - 1] &&
+\
+for i in $(seq 0 $MAX_names);
+do
+echo "start ${ls_names[$i]}"
+singularity exec work/sif/blast_latest.sif makeblastdb \
+-dbtype nucl \
+- in work/genomes/CCD_clado-${ls_names[$i]}_filtered.p_ctg.fa \
+-out work/database/${ls_names[$i]}_blastdb
+done
 ```
+
+The ITS, act and tef sequences from [Cladosporium cladosporioides CBS112388](https://www.ncbi.nlm.nih.gov/nuccore/?term=Cladosporium%20cladosporioides%20CBS%20112388) were used as query. They were placed in the folder "work/raw_reads". \
+Search for taxonomic markers in each genome:
+
+```bash
+ls_names=($(cat names_bash.txt)) &&
+MAX_names=$["$(cat names_bash.txt | wc -l)" - 1] &&
+\
+for i in $(seq 0 $MAX_names);
+do
+echo "start ${ls_names[$i]}"
+singularity exec work/sif/blast_latest.sif blastn \
+-db work/database/${ls_names[$i]}_blastdb \
+#'marker' must be changed to either ITS, act or tef
+-query work/raw_reads/clado_query_marker.txt \
+-out work/tree/${ls_names[$i]}_marker.tab \
+#outfmt 6 represents a table alignment format
+-outfmt 6
+echo "end ${ls_names[$i]}"
+done
+```
+
+This for cycle must be repeated for each of the three markers. This part could be optimized by nesting the code in another for cycle. \
+The output of this cycle is a table containing:
+- column x - start position of the sequence
+- column y - end position of the sequence
+- column z - name of the contig
+The tables are saved in "work/tree". An example is reported below: \
+blast table
+
+You can use these informations to search the sequence of interest in the genome FASTA file using the following code:
+
+```bash
+module load samtools
+
+#move the working directory to genomes because samtools does not accept paths
+cd work/genomes
+
+#'genome' must be changed to the name of the strain's assembly
+#'name' must be changed to the name of the strain
+#'marker' must be changed to either ITS, act or tef
+samtools faidx "genome.fa" "contig (z)":start(x)-end(y) > markers/name_marker.fa
+```
+
+WARNING: sequences with start_subject > end_subjet are in antisense.
+In this casse, x and y must be inverted. Furthermore, a reverse complement conversion is required. \
+An useful [reverse complement tool](https://www.bioinformatics.org/sms/rev_comp.html) is available online.
 
 ### Inport of additional Cladosporium genomes
 Additional Cladosporium genomes were inported following the [NCBI tutorial](https://github.com/ncbi/datasets)
