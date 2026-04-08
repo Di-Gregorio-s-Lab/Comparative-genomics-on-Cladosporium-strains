@@ -1,5 +1,6 @@
 # Comparative genomics on *Cladosporium* strains
 This pipeline contains the codes used in the paper "Comparative genomics of the genus *Cladosporium* seemingly identified lack of selective pressure in soils historically polluted by hexachlorocyclohexane and polychlorobiphenyls".
+DOI: [https://doi.org/10.1016/j.jece.2026.121978](https://doi.org/10.1016/j.jece.2026.121978)
 
 ## Data accessibility
 Raw genomic (g)DNA sequences and assembled genomes are pubblicly available under the NCBI BioProject [PRJNA1348484](https://www.ncbi.nlm.nih.gov/bioproject/?term=PRJNA1348484).\
