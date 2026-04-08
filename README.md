@@ -5,7 +5,7 @@ DOI: [https://doi.org/10.1016/j.jece.2026.121978](https://doi.org/10.1016/j.jece
 ## Data accessibility
 Raw genomic (g)DNA sequences and assembled genomes are pubblicly available under the NCBI BioProject [PRJNA1348484](https://www.ncbi.nlm.nih.gov/bioproject/?term=PRJNA1348484).\
 Raw sequences were obtained via PacBio HiFi circular consensus sequencing.\
-Quality and completeness of the assemblies are reported in the supplementary materials of the paper (scrivere supplementary material come link).
+Quality and completeness of the assemblies are reported in the supplementary materials of the paper.
 
 ## Pipeline overview
 The following steps were used in this work:
