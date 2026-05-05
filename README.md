@@ -3,7 +3,7 @@ This pipeline contains the codes used in the paper "Comparative genomics of the 
 DOI: [https://doi.org/10.1016/j.jece.2026.121978](https://doi.org/10.1016/j.jece.2026.121978)
 
 ## Data accessibility
-Raw genomic (g)DNA sequences and assembled genomes are pubblicly available under the NCBI BioProject [PRJNA1348484](https://www.ncbi.nlm.nih.gov/bioproject/?term=PRJNA1348484).\
+Raw genomic (g)DNA sequences and assembled genomes are publicly available under the NCBI BioProject [PRJNA1348484](https://www.ncbi.nlm.nih.gov/bioproject/?term=PRJNA1348484).\
 Raw sequences were obtained via PacBio HiFi circular consensus sequencing.\
 Quality and completeness of the assemblies are reported in the supplementary materials of the paper.
 
@@ -20,7 +20,7 @@ The following steps were used in this work:
 - [Miltiple sequence alignment with ClustalW](#miltiple-sequence-alignment-with-clustalw)
 - [PCoA and heatmaps with ggplot2 v3.5.2 and pheatmap v1.0.13 on R](#pcoa-and-heatmaps-with-ggplot2-and-pheatmap)
 
-To better navigate in the multiple analyses performed in thiese pipelines, a folders architecture was created as follows:
+To better navigate in the multiple analyses performed in these pipelines, a folders architecture was created as follows:
 - "main" folder, containing all the sub-folders for this analysis
   - "work" (sub)folder, containing raw and processed data for each pipeline
   - "results" (sub)folder, containing the final output of each pipeline
