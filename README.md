@@ -171,7 +171,7 @@ do
 echo "start ${ls_names[$i]}"
 singularity exec work/sif/blast_latest.sif makeblastdb \
 -dbtype nucl \
-- in work/genomes/CCD_clado-${ls_names[$i]}_filtered.p_ctg.fa \
+-in work/genomes/CCD_clado-${ls_names[$i]}_filtered.p_ctg.fa \
 -out work/database/${ls_names[$i]}_blastdb
 done
 ```
