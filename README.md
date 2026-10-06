@@ -572,7 +572,6 @@ Inport [names_R](#required-files) and and previously obtained [annotation files]
 
 ```r
 names <- read.table("names_R.txt", sep = ';', fill = T)
-sum_df <- data.frame()
 
 #two different annotation files are required:
 #1. Diamond annotation
@@ -587,8 +586,8 @@ for (i in c(1:length(names[,1]))) {
   second_df <-  read.table(paste("work/annotation/", df_strain, "_diamond.tsv", sep = ""),
                  sep = '\"', fill = T, quote="")
 #
-  assign(paste(df_strain,"complete", sep = "_"), temp_df0)
-  assign(paste(df_strain, "diamond", sep = "_", second_df)
+  assign(paste(df_strain,"complete", sep = "_"), temp_df)
+  assign(paste(df_strain, "diamond", sep = "_"), second_df)
 }
 ```
 
